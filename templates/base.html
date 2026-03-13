@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Detect Shopify Inbox and other chatbots from any store URL using this smart analysis tool. Works for single or bulk URLs.">
+    <meta name="keywords" content="Shopify, chatbot detector, Shopify Inbox, Tidio, Intercom, chatbot analysis">
+    <meta name="author" content="E-blazer">
+
+    <title>{% block title %}Shopify Chatbot Detector{% endblock %}</title>
+
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
+
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts: Outfit (display) + JetBrains Mono (data) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ─── DESIGN TOKENS ─────────────────────────────────────────── */
+        :root {
+            --bg:         #0a0c12;
+            --bg-2:       #0f1119;
+            --surface:    #141720;
+            --surface-2:  #1a1e2a;
+            --border:     #252a38;
+            --border-2:   #2e3447;
+
+            --amber:      #f5a623;
+            --amber-dim:  rgba(245,166,35,.12);
+            --amber-glow: rgba(245,166,35,.25);
+            --teal:       #00d4aa;
+            --teal-dim:   rgba(0,212,170,.1);
+            --red:        #ff4d6d;
+            --red-dim:    rgba(255,77,109,.1);
+
+            --text:       #e2e5f0;
+            --text-2:     #9aa0b8;
+            --text-3:     #545b75;
+
+            --font-head:  'Outfit', sans-serif;
+            --font-mono:  'JetBrains Mono', monospace;
+
+            --radius-sm:  6px;
+            --radius:     10px;
+            --radius-lg:  16px;
+
+            --shadow:     0 4px 24px rgba(0,0,0,.4);
+            --shadow-lg:  0 8px 48px rgba(0,0,0,.6);
+        }
+
+        /* ─── RESET / BASE ──────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-head);
+            font-size: 15px;
+            line-height: 1.65;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            /* subtle dot-grid overlay */
+            background-image: radial-gradient(circle, rgba(255,255,255,.03) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+
+        main { flex: 1; }
+
+        /* ─── SCROLLBAR ─────────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 99px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
+        /* ─── NAVBAR ────────────────────────────────────────────────── */
+        .navbar-custom {
+            background: rgba(10,12,18,.85);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--border);
+            padding: 0.85rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar-brand-custom {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .brand-icon {
+            width: 34px; height: 34px;
+            background: var(--amber);
+            border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--bg);
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .brand-name {
+            font-family: var(--font-head);
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text);
+            letter-spacing: -0.2px;
+        }
+
+        .brand-name span {
+            color: var(--amber);
+        }
+
+        .nav-tag {
+            font-family: var(--font-mono);
+            font-size: 0.6rem;
+            padding: 2px 8px;
+            border-radius: 99px;
+            border: 1px solid var(--border-2);
+            color: var(--text-3);
+            letter-spacing: 1px;
+        }
+
+        /* ─── FLASH MESSAGES ────────────────────────────────────────── */
+        .flash-zone { padding: 0.75rem 0 0; }
+
+        .flash-alert {
+            background: var(--surface);
+            border: 1px solid var(--amber);
+            border-left: 4px solid var(--amber);
+            color: var(--text);
+            border-radius: var(--radius);
+            padding: 0.8rem 1.1rem;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .flash-alert .btn-close { filter: invert(1) opacity(.5); }
+        .flash-alert .btn-close:hover { filter: invert(1) opacity(1); }
+
+        /* ─── FOOTER ────────────────────────────────────────────────── */
+        .footer-custom {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 1.25rem 0;
+            margin-top: auto;
+        }
+
+        .footer-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .footer-copy {
+            font-size: 0.78rem;
+            color: var(--text-3);
+            font-family: var(--font-mono);
+        }
+
+        .footer-copy strong { color: var(--amber); }
+
+        .footer-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .footer-links a {
+            font-size: 0.75rem;
+            color: var(--text-3);
+            text-decoration: none;
+            transition: color .2s;
+        }
+
+        .footer-links a:hover { color: var(--amber); }
+
+        /* ─── UTILITY CLASSES ───────────────────────────────────────── */
+        .mono { font-family: var(--font-mono); }
+        .text-amber { color: var(--amber) !important; }
+        .text-teal  { color: var(--teal) !important; }
+        .text-muted-custom { color: var(--text-2) !important; }
+
+        .badge-amber {
+            background: var(--amber-dim);
+            border: 1px solid rgba(245,166,35,.3);
+            color: var(--amber);
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 99px;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-teal {
+            background: var(--teal-dim);
+            border: 1px solid rgba(0,212,170,.25);
+            color: var(--teal);
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 99px;
+        }
+
+        .badge-red {
+            background: var(--red-dim);
+            border: 1px solid rgba(255,77,109,.25);
+            color: var(--red);
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 99px;
+        }
+
+        /* card surface */
+        .card-dark {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+        }
+
+        /* btn variants */
+        .btn-amber {
+            background: var(--amber);
+            border: none;
+            color: var(--bg);
+            font-weight: 600;
+            font-family: var(--font-head);
+            border-radius: var(--radius);
+            padding: 0.6rem 1.4rem;
+            transition: opacity .2s, transform .15s;
+        }
+
+        .btn-amber:hover { opacity: .88; transform: translateY(-1px); color: var(--bg); }
+        .btn-amber:active { transform: translateY(0); }
+
+        .btn-outline-amber {
+            background: transparent;
+            border: 1px solid rgba(245,166,35,.4);
+            color: var(--amber);
+            font-weight: 500;
+            font-family: var(--font-head);
+            border-radius: var(--radius);
+            padding: 0.6rem 1.4rem;
+            transition: all .2s;
+        }
+
+        .btn-outline-amber:hover {
+            background: var(--amber-dim);
+            border-color: var(--amber);
+            color: var(--amber);
+            transform: translateY(-1px);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid var(--border-2);
+            color: var(--text-2);
+            font-family: var(--font-head);
+            font-size: 0.85rem;
+            border-radius: var(--radius);
+            padding: 0.5rem 1.1rem;
+            transition: all .2s;
+        }
+
+        .btn-ghost:hover {
+            border-color: var(--text-3);
+            color: var(--text);
+            background: var(--surface-2);
+        }
+
+        /* form controls */
+        .form-control-dark {
+            background: var(--bg-2) !important;
+            border: 1px solid var(--border-2) !important;
+            color: var(--text) !important;
+            border-radius: var(--radius) !important;
+            font-family: var(--font-mono);
+            font-size: 0.85rem !important;
+            padding: 0.7rem 1rem !important;
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        .form-control-dark:focus {
+            border-color: var(--amber) !important;
+            box-shadow: 0 0 0 3px var(--amber-glow) !important;
+            background: var(--bg-2) !important;
+            color: var(--text) !important;
+            outline: none;
+        }
+
+        .form-control-dark::placeholder { color: var(--text-3) !important; }
+
+        /* ─── TOAST ─────────────────────────────────────────────────── */
+        .toast-custom {
+            background: var(--surface-2);
+            border: 1px solid var(--border-2);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-size: 0.82rem;
+            box-shadow: var(--shadow);
+            min-width: 260px;
+        }
+
+        .toast-custom.toast-success { border-left: 3px solid var(--teal); }
+        .toast-custom.toast-error   { border-left: 3px solid var(--red); }
+        .toast-custom.toast-info    { border-left: 3px solid var(--amber); }
+
+        /* ─── PAGE-LOAD ANIMATION ───────────────────────────────────── */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .anim-fade-up {
+            animation: fadeUp .45s ease both;
+        }
+
+        .anim-delay-1 { animation-delay: .08s; }
+        .anim-delay-2 { animation-delay: .16s; }
+        .anim-delay-3 { animation-delay: .24s; }
+        .anim-delay-4 { animation-delay: .32s; }
+    </style>
+
+    {% block head_extra %}{% endblock %}
+</head>
+
+<body>
+
+    <!-- ── NAVBAR ──────────────────────────────────────────────────── -->
+    <nav class="navbar-custom">
+        <div class="container d-flex align-items-center justify-content-between">
+            <a class="navbar-brand-custom" href="{{ url_for('index') }}">
+                <div class="brand-icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div>
+                    <div class="brand-name">Chatbot<span>Radar</span></div>
+                </div>
+            </a>
+            <span class="nav-tag">v2.0</span>
+        </div>
+    </nav>
+
+    <!-- ── FLASH MESSAGES ─────────────────────────────────────────── -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="container flash-zone">
+                {% for message in messages %}
+                    <div class="flash-alert alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-circle text-amber me-1"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- ── MAIN CONTENT ───────────────────────────────────────────── -->
+    <main class="pb-5">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- ── TOAST ZONE ─────────────────────────────────────────────── -->
+    <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:9999;"></div>
+
+    <!-- ── FOOTER ─────────────────────────────────────────────────── -->
+    <footer class="footer-custom">
+        <div class="container footer-inner">
+            <span class="footer-copy">&copy; {{ current_year | default(2025) }} <strong>E-blazer</strong> · All rights reserved.</span>
+            <div class="footer-links">
+                <a href="#">Docs</a>
+                <a href="#">API</a>
+                <a href="#">Support</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Global JS utilities -->
+    <script>
+        // ── Toast helper ──────────────────────────────────────────────
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const id = 'toast-' + Date.now();
+            const icons = { success: 'check-circle', error: 'times-circle', info: 'info-circle' };
+            const el = document.createElement('div');
+            el.id = id;
+            el.className = `toast toast-custom toast-${type} show mb-2`;
+            el.setAttribute('role', 'alert');
+            el.innerHTML = `
+                <div class="d-flex align-items-start p-3 gap-2">
+                    <i class="fas fa-${icons[type] || 'info-circle'} mt-1" style="color:var(--${type === 'success' ? 'teal' : type === 'error' ? 'red' : 'amber'})"></i>
+                    <span class="flex-grow-1" style="font-size:.82rem">${message}</span>
+                    <button type="button" class="btn-close btn-close-white opacity-50" onclick="this.closest('.toast').remove()" style="font-size:.65rem"></button>
+                </div>`;
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 5000);
+        }
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

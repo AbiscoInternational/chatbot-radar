@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bulk Analysis — Progress</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0c0e14;
+      --surface: #13161f;
+      --border: #1e2330;
+      --accent: #00e5b0;
+      --accent2: #ff4d6d;
+      --accent3: #ffd166;
+      --text: #e8eaf2;
+      --muted: #5a607a;
+      --radius: 12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    /* subtle grid bg */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,176,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,176,.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 640px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2.5rem;
+      position: relative;
+    }
+
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 0.25rem;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 2rem;
+    }
+
+    /* Status badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.3rem 0.8rem;
+      border-radius: 999px;
+      margin-bottom: 1.5rem;
+      border: 1px solid transparent;
+      transition: all 0.3s;
+    }
+    .status-badge.processing { background: rgba(0,229,176,.1); border-color: var(--accent); color: var(--accent); }
+    .status-badge.paused     { background: rgba(255,209,102,.1); border-color: var(--accent3); color: var(--accent3); }
+    .status-badge.stopped    { background: rgba(255,77,109,.1);  border-color: var(--accent2); color: var(--accent2); }
+    .status-badge.completed  { background: rgba(0,229,176,.15); border-color: var(--accent); color: var(--accent); }
+    .status-badge.error      { background: rgba(255,77,109,.1);  border-color: var(--accent2); color: var(--accent2); }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .dot.pulse { animation: pulse 1.4s ease-in-out infinite; }
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    /* Counter */
+    .counter {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 0.6rem;
+    }
+    .counter-current { font-size: 2.2rem; font-weight: 500; color: var(--text); }
+    .counter-total   { font-size: 0.85rem; color: var(--muted); }
+
+    /* Progress bar */
+    .bar-track {
+      width: 100%;
+      height: 6px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), #00b4d8);
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+    .bar-fill.paused  { background: linear-gradient(90deg, var(--accent3), #ffaa33); }
+    .bar-fill.stopped { background: linear-gradient(90deg, var(--accent2), #ff8fa3); }
+
+    /* Control buttons */
+    .controls {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      flex: 1;
+      min-width: 100px;
+      padding: 0.7rem 1.2rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+
+    .btn-pause  { border-color: var(--accent3); color: var(--accent3); }
+    .btn-pause:hover:not(:disabled) { background: rgba(255,209,102,.1); }
+
+    .btn-resume { border-color: var(--accent); color: var(--accent); }
+    .btn-resume:hover:not(:disabled) { background: rgba(0,229,176,.1); }
+
+    .btn-stop   { border-color: var(--accent2); color: var(--accent2); }
+    .btn-stop:hover:not(:disabled) { background: rgba(255,77,109,.1); }
+
+    /* View Results link */
+    .view-results-link {
+      display: none;
+      margin-top: 1.5rem;
+      text-align: center;
+    }
+    .view-results-link a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.75rem 2rem;
+      border-radius: 8px;
+      background: var(--accent);
+      color: var(--bg);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+    .view-results-link a:hover { opacity: 0.85; }
+
+    /* Log */
+    .log-label { font-size: 0.7rem; color: var(--muted); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 1px; }
+    .log {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      min-height: 52px;
+      line-height: 1.6;
+    }
+
+    #task-id-display { font-size: 0.7rem; color: var(--muted); margin-top: 1.5rem; text-align: right; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Bulk Analysis</h1>
+    <div class="subtitle">Processing your store list…</div>
+
+    <span id="status-badge" class="status-badge processing">
+      <span class="dot pulse" id="status-dot"></span>
+      <span id="status-text">Initialising…</span>
+    </span>
+
+    <div class="counter">
+      <span class="counter-current"><span id="current">0</span> / <span id="total">—</span></span>
+      <span class="counter-total" id="pct">0%</span>
+    </div>
+    <div class="bar-track">
+      <div class="bar-fill" id="bar"></div>
+    </div>
+
+    <div class="controls">
+      <button class="btn btn-pause"  id="btn-pause"  onclick="control('pause')">
+        ⏸ Pause
+      </button>
+      <button class="btn btn-resume" id="btn-resume" onclick="control('resume')" disabled>
+        ▶ Resume
+      </button>
+      <button class="btn btn-stop"   id="btn-stop"   onclick="control('stop')">
+        ⏹ Stop
+      </button>
+    </div>
+
+    <div class="log-label">Latest activity</div>
+    <div class="log" id="log">Waiting for task to start…</div>
+
+    <div class="view-results-link" id="results-link">
+      <a href="/bulk_results/{{ task_id }}">→ View Results</a>
+    </div>
+
+    <div id="task-id-display">task: {{ task_id }}</div>
+  </div>
+
+  <script>
+    const TASK_ID = "{{ task_id }}";
+    let pollInterval = null;
+    let lastStatus = '';
+
+    function control(action) {
+      fetch(`/api/control/${TASK_ID}/${action}`, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (!data.success) console.error(data.error);
+        });
+    }
+
+    function updateUI(data) {
+      const current  = data.current || 0;
+      const total    = data.total   || 0;
+      const status   = data.status  || 'processing';
+      const pct      = total > 0 ? Math.round((current / total) * 100) : 0;
+
+      document.getElementById('current').textContent = current;
+      document.getElementById('total').textContent   = total || '—';
+      document.getElementById('pct').textContent     = pct + '%';
+
+      const bar = document.getElementById('bar');
+      bar.style.width = pct + '%';
+      bar.className = 'bar-fill ' + (status === 'paused' ? 'paused' : status === 'stopped' ? 'stopped' : '');
+
+      const badge   = document.getElementById('status-badge');
+      const dot     = document.getElementById('status-dot');
+      const stText  = document.getElementById('status-text');
+      const log     = document.getElementById('log');
+
+      badge.className = 'status-badge ' + status;
+      dot.className   = 'dot' + (status === 'processing' ? ' pulse' : '');
+
+      const labels = {
+        processing: '⚡ Processing',
+        paused:     '⏸ Paused',
+        stopped:    '⏹ Stopped',
+        completed:  '✓ Completed',
+        error:      '✕ Error',
+        not_found:  '? Not found'
+      };
+      stText.textContent = labels[status] || status;
+
+      // Log message
+      if (status === 'processing') {
+        log.textContent = `Analysing URL ${current} of ${total}…`;
+      } else if (status === 'paused') {
+        log.textContent = `Paused at ${current} of ${total}. Click Resume to continue.`;
+      } else if (status === 'stopped') {
+        log.textContent = `Stopped at ${current} of ${total}. ${current} result(s) available.`;
+      } else if (status === 'completed') {
+        log.textContent = `Finished! Processed ${total} URL(s).`;
+      } else if (status === 'error') {
+        log.textContent = 'Error: ' + (data.error || 'Unknown error');
+      }
+
+      // Button state
+      const btnPause  = document.getElementById('btn-pause');
+      const btnResume = document.getElementById('btn-resume');
+      const btnStop   = document.getElementById('btn-stop');
+      const isActive  = status === 'processing';
+      const isPaused  = status === 'paused';
+      const isDone    = status === 'completed' || status === 'stopped' || status === 'error';
+
+      btnPause.disabled  = !isActive;
+      btnResume.disabled = !isPaused;
+      btnStop.disabled   = isDone;
+
+      // Show results link when done
+      if (isDone && current > 0) {
+        document.getElementById('results-link').style.display = 'block';
+      }
+
+      // Stop polling when terminal state reached
+      if (isDone && pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    }
+
+    function poll() {
+      fetch(`/api/progress/${TASK_ID}`)
+        .then(r => r.json())
+        .then(updateUI)
+        .catch(err => console.error('Poll error', err));
+    }
+
+    poll();
+    pollInterval = setInterval(poll, 1000);
+  </script>
+</body>
+</html>

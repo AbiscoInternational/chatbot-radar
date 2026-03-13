@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bulk Analysis — Results</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0c0e14;
+      --surface: #13161f;
+      --border: #1e2330;
+      --accent: #00e5b0;
+      --accent2: #ff4d6d;
+      --accent3: #ffd166;
+      --text: #e8eaf2;
+      --muted: #5a607a;
+      --radius: 12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      padding: 2.5rem 1.5rem;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,176,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,176,.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+    .back-link {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-decoration: none;
+      border: 1px solid var(--border);
+      padding: 0.4rem 0.9rem;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .back-link:hover { color: var(--text); border-color: var(--muted); }
+
+    /* Summary cards */
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem 1.4rem;
+    }
+    .stat-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.4rem; }
+    .stat-value { font-size: 2rem; font-weight: 500; }
+    .stat-value.green  { color: var(--accent); }
+    .stat-value.red    { color: var(--accent2); }
+    .stat-value.yellow { color: var(--accent3); }
+    .stat-value.white  { color: var(--text); }
+
+    /* Download section */
+    .downloads {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.8rem;
+      margin-bottom: 2rem;
+    }
+    .downloads-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+    .download-section-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 0.75rem;
+      font-family: 'DM Mono', monospace;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .download-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.75rem;
+    }
+    .dl-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.2rem;
+      padding: 1rem 1.2rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      text-decoration: none;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .dl-btn:hover { transform: translateY(-2px); }
+    .dl-btn-icon { font-size: 1.2rem; margin-bottom: 0.3rem; }
+    .dl-btn-label { font-size: 0.82rem; font-weight: 500; }
+    .dl-btn-sub   { font-size: 0.7rem; color: var(--muted); }
+
+    .dl-all     { border-color: rgba(255,255,255,.15); color: var(--text); }
+    .dl-all:hover { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.3); }
+
+    .dl-with    { border-color: rgba(0,229,176,.3); color: var(--accent); }
+    .dl-with:hover { background: rgba(0,229,176,.08); border-color: var(--accent); }
+
+    .dl-without { border-color: rgba(255,77,109,.3); color: var(--accent2); }
+    .dl-without:hover { background: rgba(255,77,109,.08); border-color: var(--accent2); }
+
+    /* Re-analyze section */
+    .reanalyze-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.8rem;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .reanalyze-text {
+      flex: 1;
+      min-width: 200px;
+    }
+    .reanalyze-title {
+      font-size: 0.9rem;
+      color: var(--text);
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+    .reanalyze-desc {
+      font-size: 0.75rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .reanalyze-btn {
+      background: transparent;
+      border: 1px solid rgba(255,209,102,.4);
+      color: var(--accent3);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      padding: 0.7rem 1.4rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 500;
+    }
+    .reanalyze-btn:hover {
+      background: rgba(255,209,102,.1);
+      border-color: var(--accent3);
+      transform: translateY(-1px);
+    }
+    .reanalyze-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Table */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .table-header-bar {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    /* Search box */
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.4rem 0.8rem;
+      min-width: 220px;
+    }
+
+    .search-box input {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      outline: none;
+      width: 100%;
+    }
+
+    .search-box input::placeholder { color: var(--text-3); }
+    .search-box i { color: var(--text-3); font-size: 0.7rem; }
+
+    /* Filter tabs */
+    .filter-tabs { display: flex; gap: 0.5rem; }
+    .tab {
+      padding: 0.3rem 0.8rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 0.72rem;
+      cursor: pointer;
+      background: transparent;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      transition: all 0.2s;
+    }
+    .tab.active-all    { border-color: rgba(255,255,255,.3); color: var(--text); }
+    .tab.active-with   { border-color: var(--accent); color: var(--accent); background: rgba(0,229,176,.08); }
+    .tab.active-without{ border-color: var(--accent2); color: var(--accent2); background: rgba(255,77,109,.08); }
+
+    .overflow-x { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    thead tr { background: rgba(0,0,0,.3); }
+    th {
+      padding: 0.8rem 1rem;
+      text-align: left;
+      font-weight: 500;
+      color: var(--muted);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      color: var(--text);
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .badge-yes  { background: rgba(0,229,176,.12); color: var(--accent); border: 1px solid rgba(0,229,176,.3); }
+    .badge-no   { background: rgba(255,77,109,.1);  color: var(--accent2); border: 1px solid rgba(255,77,109,.25); }
+    .badge-err  { background: rgba(255,209,102,.1); color: var(--accent3); border: 1px solid rgba(255,209,102,.25); }
+
+    .chatbot-tag {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--border);
+      font-size: 0.68rem;
+      margin: 1px;
+      color: var(--text);
+    }
+
+    .no-rows { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.85rem; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1>Analysis Results</h1>
+      <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem;">task: {{ task_id }}</div>
+    </div>
+    <a href="/" class="back-link">← New Analysis</a>
+  </div>
+
+  <!-- Summary -->
+  {% set total     = results | length %}
+  {% set with_si   = results | selectattr('shopify_inbox') | list | length %}
+  {% set without_si= total - with_si %}
+  {% set errors    = results | selectattr('status','eq','error') | list | length %}
+
+  <div class="summary">
+    <div class="stat-card">
+      <div class="stat-label">Total Stores</div>
+      <div class="stat-value white">{{ total }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">With Shopify Inbox</div>
+      <div class="stat-value green">{{ with_si }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Without Shopify Inbox</div>
+      <div class="stat-value red">{{ without_si }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Errors</div>
+      <div class="stat-value yellow">{{ errors }}</div>
+    </div>
+  </div>
+
+  <!-- Downloads -->
+  <div class="downloads">
+    <div class="downloads-title">↓ Download Results</div>
+    
+    <!-- CSV Downloads -->
+    <div class="download-section-label">
+      <i class="fas fa-file-csv"></i> CSV Format (Full Details)
+    </div>
+    <div class="download-grid" style="margin-bottom:1.5rem;">
+      <a href="/download_results/{{ task_id }}" class="dl-btn dl-all">
+        <span class="dl-btn-icon">📦</span>
+        <span class="dl-btn-label">All Stores</span>
+        <span class="dl-btn-sub">{{ total }} rows · CSV</span>
+      </a>
+      <a href="/download_results/{{ task_id }}/with_shopify_inbox" class="dl-btn dl-with">
+        <span class="dl-btn-icon">✅</span>
+        <span class="dl-btn-label">With Shopify Inbox</span>
+        <span class="dl-btn-sub">{{ with_si }} rows · CSV</span>
+      </a>
+      <a href="/download_results/{{ task_id }}/without_shopify_inbox" class="dl-btn dl-without">
+        <span class="dl-btn-icon">❌</span>
+        <span class="dl-btn-label">Without Shopify Inbox</span>
+        <span class="dl-btn-sub">{{ without_si }} rows · CSV</span>
+      </a>
+    </div>
+
+    <!-- TXT Downloads (URLs only) -->
+    <div class="download-section-label">
+      <i class="fas fa-file-alt"></i> TXT Format (URLs Only)
+    </div>
+    <div class="download-grid">
+      <a href="/download_results/{{ task_id }}/with_shopify_inbox/txt" class="dl-btn dl-with">
+        <span class="dl-btn-icon">📄</span>
+        <span class="dl-btn-label">With Shopify Inbox</span>
+        <span class="dl-btn-sub">{{ with_si }} URLs · TXT</span>
+      </a>
+      <a href="/download_results/{{ task_id }}/without_shopify_inbox/txt" class="dl-btn dl-without">
+        <span class="dl-btn-icon">📄</span>
+        <span class="dl-btn-label">Without Shopify Inbox</span>
+        <span class="dl-btn-sub">{{ without_si }} URLs · TXT</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Re-analyze Section -->
+  {% if without_si > 0 %}
+  <div class="reanalyze-section">
+    <div class="reanalyze-text">
+      <div class="reanalyze-title">
+        <i class="fas fa-redo-alt" style="color:var(--accent3);margin-right:4px;"></i>
+        Re-analyze Stores Without Shopify Inbox
+      </div>
+      <div class="reanalyze-desc">
+        Click below to automatically re-scan the {{ without_si }} store(s) that don't have Shopify Inbox.
+        Useful if some scans failed due to network issues or timeouts.
+      </div>
+    </div>
+    <form method="POST" action="/reanalyze/{{ task_id }}/without_shopify_inbox" style="display:inline;">
+      <button type="submit" class="reanalyze-btn">
+        <i class="fas fa-sync-alt"></i>
+        Re-analyze {{ without_si }} Store{{ 's' if without_si != 1 else '' }}
+      </button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <div class="table-header-bar">
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;flex:1">
+        <span>Detailed Results</span>
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input type="text" id="search-input" placeholder="Search URLs..." onkeyup="searchTable()">
+        </div>
+      </div>
+      <div class="filter-tabs">
+        <button class="tab active-all" id="tab-all" onclick="filterRows('all')">All ({{ total }})</button>
+        <button class="tab" id="tab-with" onclick="filterRows('with')">With SI ({{ with_si }})</button>
+        <button class="tab" id="tab-without" onclick="filterRows('without')">No SI ({{ without_si }})</button>
+      </div>
+    </div>
+    <div class="overflow-x">
+      <table id="results-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>URL</th>
+            <th>Shopify Inbox</th>
+            <th>Other Chatbots</th>
+            <th>Status</th>
+            <th>Analysed At</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          {% for result in results %}
+          <tr data-si="{{ 'yes' if result.shopify_inbox else 'no' }}" data-status="{{ result.status }}">
+            <td style="color:var(--muted)">{{ loop.index }}</td>
+            <td title="{{ result.url }}">{{ result.url }}</td>
+            <td>
+              {% if result.status == 'error' %}
+                <span class="badge badge-err">⚠ Error</span>
+              {% elif result.shopify_inbox %}
+                <span class="badge badge-yes">✓ Yes</span>
+              {% else %}
+                <span class="badge badge-no">✗ No</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if result.other_chatbots %}
+                {% for bot in result.other_chatbots %}
+                  <span class="chatbot-tag">{{ bot }}</span>
+                {% endfor %}
+              {% else %}
+                <span style="color:var(--muted)">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if result.status == 'error' %}
+                <span class="badge badge-err">Error</span>
+              {% else %}
+                <span class="badge badge-yes">OK</span>
+              {% endif %}
+            </td>
+            <td style="color:var(--muted);font-size:.7rem">
+              {{ result.analyzed_at[:16].replace('T',' ') if result.analyzed_at else '—' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="no-rows hidden" id="no-rows-msg">No rows match the current filter.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+<script>
+  let currentFilter = 'all';
+
+  function filterRows(filter) {
+    currentFilter = filter;
+    const rows = document.querySelectorAll('#table-body tr');
+    const searchTerm = document.getElementById('search-input').value.toLowerCase();
+    let visible = 0;
+    
+    rows.forEach(row => {
+      const si = row.dataset.si;
+      const url = row.children[1].textContent.toLowerCase();
+      
+      const matchesFilter = filter === 'all' ||
+                           (filter === 'with'    && si === 'yes') ||
+                           (filter === 'without' && si === 'no');
+      const matchesSearch = searchTerm === '' || url.includes(searchTerm);
+      
+      const show = matchesFilter && matchesSearch;
+      row.classList.toggle('hidden', !show);
+      if (show) visible++;
+    });
+    
+    document.getElementById('no-rows-msg').classList.toggle('hidden', visible > 0);
+
+    // Update tab styles
+    ['all','with','without'].forEach(t => {
+      const btn = document.getElementById('tab-' + t);
+      btn.className = 'tab' + (t === filter ? ` active-${t === 'all' ? 'all' : t === 'with' ? 'with' : 'without'}` : '');
+    });
+  }
+
+  function searchTable() {
+    filterRows(currentFilter);
+  }
+</script>
+</body>
+</html>

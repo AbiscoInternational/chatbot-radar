@@ -1,0 +1,673 @@
+{% extends "base.html" %}
+
+{% block title %}Shopify Chatbot Detector — ChatbotRadar{% endblock %}
+
+{% block head_extra %}
+<style>
+    /* ─── HERO ──────────────────────────────────────────────────────── */
+    .hero {
+        padding: 5rem 0 4rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Glowing orb behind hero text */
+    .hero::before {
+        content: '';
+        position: absolute;
+        top: -120px; left: 50%;
+        transform: translateX(-50%);
+        width: 600px; height: 400px;
+        background: radial-gradient(ellipse, rgba(245,166,35,.1) 0%, transparent 70%);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .hero > .container { position: relative; z-index: 1; }
+
+    .hero-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: var(--amber);
+        border: 1px solid rgba(245,166,35,.25);
+        background: var(--amber-dim);
+        padding: 4px 14px;
+        border-radius: 99px;
+        margin-bottom: 1.5rem;
+    }
+
+    .hero-title {
+        font-family: var(--font-head);
+        font-size: clamp(2.2rem, 5vw, 3.4rem);
+        font-weight: 900;
+        line-height: 1.1;
+        letter-spacing: -1.5px;
+        color: var(--text);
+        margin-bottom: 1.2rem;
+    }
+
+    .hero-title .highlight {
+        color: var(--amber);
+        position: relative;
+        display: inline-block;
+    }
+
+    .hero-title .highlight::after {
+        content: '';
+        position: absolute;
+        bottom: 2px; left: 0; right: 0;
+        height: 3px;
+        background: var(--amber);
+        border-radius: 2px;
+        opacity: .35;
+    }
+
+    .hero-subtitle {
+        font-size: 1.05rem;
+        color: var(--text-2);
+        max-width: 540px;
+        line-height: 1.7;
+        margin-bottom: 2rem;
+    }
+
+    .hero-stats {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .hero-stat-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .hero-stat-num {
+        font-family: var(--font-mono);
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text);
+        line-height: 1;
+    }
+
+    .hero-stat-label {
+        font-size: 0.72rem;
+        color: var(--text-3);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-top: 3px;
+    }
+
+    /* ─── DIVIDER ──────────────────────────────────────────────────── */
+    .section-divider {
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--border), transparent);
+        margin: 0;
+    }
+
+    /* ─── FORM SECTION ─────────────────────────────────────────────── */
+    .forms-section {
+        padding: 3.5rem 0;
+    }
+
+    .section-label {
+        font-family: var(--font-mono);
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: var(--text-3);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .section-label::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+    }
+
+    /* Form cards */
+    .form-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        height: 100%;
+        position: relative;
+        transition: border-color .25s, box-shadow .25s;
+        overflow: hidden;
+    }
+
+    .form-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+
+    .form-card.card-primary::before { background: var(--amber); }
+    .form-card.card-secondary::before { background: var(--teal); }
+
+    .form-card:hover {
+        border-color: var(--border-2);
+        box-shadow: var(--shadow);
+    }
+
+    .form-card-icon {
+        width: 44px; height: 44px;
+        border-radius: var(--radius);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px;
+        margin-bottom: 1.1rem;
+    }
+
+    .icon-amber { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(245,166,35,.2); }
+    .icon-teal  { background: var(--teal-dim); color: var(--teal); border: 1px solid rgba(0,212,170,.2); }
+
+    .form-card-title {
+        font-family: var(--font-head);
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: var(--text);
+        margin-bottom: 0.35rem;
+        letter-spacing: -0.3px;
+    }
+
+    .form-card-desc {
+        font-size: 0.85rem;
+        color: var(--text-2);
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+
+    .form-label-custom {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-2);
+        margin-bottom: 0.4rem;
+        display: block;
+    }
+
+    .form-hint {
+        font-size: 0.72rem;
+        color: var(--text-3);
+        margin-top: 0.35rem;
+        font-family: var(--font-mono);
+    }
+
+    /* File drop zone */
+    .file-drop {
+        border: 1px dashed var(--border-2);
+        border-radius: var(--radius);
+        padding: 1.5rem 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all .2s;
+        background: var(--bg-2);
+        position: relative;
+    }
+
+    .file-drop:hover, .file-drop.drag-over {
+        border-color: var(--teal);
+        background: var(--teal-dim);
+    }
+
+    .file-drop input[type="file"] {
+        position: absolute; inset: 0;
+        opacity: 0;
+        cursor: pointer;
+        width: 100%; height: 100%;
+    }
+
+    .file-drop-icon {
+        font-size: 1.6rem;
+        color: var(--text-3);
+        margin-bottom: 0.5rem;
+        display: block;
+        transition: color .2s;
+    }
+
+    .file-drop:hover .file-drop-icon,
+    .file-drop.drag-over .file-drop-icon { color: var(--teal); }
+
+    .file-drop-text {
+        font-size: 0.82rem;
+        color: var(--text-2);
+    }
+
+    .file-drop-text strong { color: var(--teal); }
+
+    .file-name-display {
+        display: none;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--teal);
+        margin-top: 0.5rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Upload progress */
+    .upload-progress {
+        display: none;
+        height: 4px;
+        border-radius: 99px;
+        background: var(--border);
+        overflow: hidden;
+        margin-top: 0.6rem;
+    }
+
+    .upload-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--teal), #00b4d8);
+        border-radius: 99px;
+        width: 0%;
+        transition: width .2s;
+    }
+
+    /* Submit buttons */
+    .btn-submit-primary {
+        width: 100%;
+        padding: 0.75rem;
+        background: var(--amber);
+        border: none;
+        color: var(--bg);
+        font-family: var(--font-head);
+        font-weight: 700;
+        font-size: 0.92rem;
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition: all .2s;
+        display: flex; align-items: center; justify-content: center;
+        gap: 0.5rem;
+        margin-top: 1.25rem;
+    }
+
+    .btn-submit-primary:hover { opacity: .88; transform: translateY(-1px); }
+    .btn-submit-primary:active { transform: translateY(0); opacity: 1; }
+    .btn-submit-primary:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+    .btn-submit-secondary {
+        width: 100%;
+        padding: 0.75rem;
+        background: transparent;
+        border: 1px solid rgba(0,212,170,.35);
+        color: var(--teal);
+        font-family: var(--font-head);
+        font-weight: 600;
+        font-size: 0.92rem;
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition: all .2s;
+        display: flex; align-items: center; justify-content: center;
+        gap: 0.5rem;
+        margin-top: 1.25rem;
+    }
+
+    .btn-submit-secondary:hover { background: var(--teal-dim); border-color: var(--teal); transform: translateY(-1px); }
+    .btn-submit-secondary:active { transform: translateY(0); }
+
+    /* Spinner */
+    .btn-spinner {
+        width: 16px; height: 16px;
+        border: 2px solid rgba(10,12,18,.3);
+        border-top-color: var(--bg);
+        border-radius: 50%;
+        animation: spin .6s linear infinite;
+        display: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── INFO SECTION ─────────────────────────────────────────────── */
+    .info-section {
+        padding: 0 0 4rem;
+    }
+
+    .info-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 1.75rem;
+        height: 100%;
+    }
+
+    .info-card-title {
+        font-family: var(--font-head);
+        font-weight: 700;
+        font-size: 0.95rem;
+        letter-spacing: -0.2px;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* How it works steps */
+    .steps-list {
+        list-style: none;
+        padding: 0; margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+    }
+
+    .step-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        font-size: 0.88rem;
+        color: var(--text-2);
+    }
+
+    .step-num {
+        width: 24px; height: 24px;
+        border-radius: 6px;
+        background: var(--amber-dim);
+        border: 1px solid rgba(245,166,35,.2);
+        color: var(--amber);
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+
+    /* Chatbot grid */
+    .chatbot-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
+
+    .chatbot-item {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 0.82rem;
+        color: var(--text-2);
+        padding: 0.4rem 0.6rem;
+        border-radius: var(--radius-sm);
+        background: var(--bg-2);
+        border: 1px solid var(--border);
+        transition: all .15s;
+    }
+
+    .chatbot-item:hover {
+        border-color: var(--border-2);
+        color: var(--text);
+    }
+
+    .chatbot-item .dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: var(--teal);
+        flex-shrink: 0;
+    }
+
+    /* ─── RESPONSIVE ───────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+        .hero { padding: 3rem 0 2.5rem; }
+        .hero-title { font-size: 2rem; }
+        .hero-stats { gap: 1.2rem; }
+        .chatbot-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── HERO ──────────────────────────────────────────────────────────── -->
+<section class="hero anim-fade-up">
+    <div class="container">
+        <div class="text-center">
+            <div class="hero-eyebrow">
+                <i class="fas fa-satellite-dish"></i>
+                Live Detection Engine
+            </div>
+            <h1 class="hero-title">
+                Detect <span class="highlight">Shopify Inbox</span><br>
+                &amp; Any Chat Widget
+            </h1>
+            <p class="hero-subtitle mx-auto">
+                Instantly scan any Shopify store to reveal which chatbot or live-chat widget
+                they're running — one URL at a time or thousands in bulk.
+            </p>
+            <div class="hero-stats justify-content-center">
+                <div class="hero-stat-item">
+                    <span class="hero-stat-num">12+</span>
+                    <span class="hero-stat-label">Chatbots Detected</span>
+                </div>
+                <div class="hero-stat-item" style="border-left:1px solid var(--border);padding-left:2rem">
+                    <span class="hero-stat-num">&lt;5s</span>
+                    <span class="hero-stat-label">Per Analysis</span>
+                </div>
+                <div class="hero-stat-item" style="border-left:1px solid var(--border);padding-left:2rem">
+                    <span class="hero-stat-num">CSV</span>
+                    <span class="hero-stat-label">Export Ready</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ── FORMS ─────────────────────────────────────────────────────────── -->
+<section class="forms-section">
+    <div class="container">
+        <div class="section-label">Analysis Mode</div>
+
+        <div class="row g-4">
+            <!-- Single URL -->
+            <div class="col-md-6 anim-fade-up anim-delay-1">
+                <div class="form-card card-primary">
+                    <div class="form-card-icon icon-amber">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <div class="form-card-title">Single Website</div>
+                    <div class="form-card-desc">
+                        Paste one URL and get a full chatbot breakdown in seconds.
+                    </div>
+
+                    <form method="POST" action="{{ url_for('analyze_single') }}" id="single-form">
+                        <label for="url" class="form-label-custom">Store URL</label>
+                        <input
+                            type="url"
+                            class="form-control form-control-dark"
+                            id="url"
+                            name="url"
+                            placeholder="https://example.myshopify.com"
+                            required
+                            autocomplete="off"
+                        >
+                        <div class="form-hint">Include https:// — e.g. https://mystore.com</div>
+
+                        <button type="submit" class="btn-submit-primary" id="single-btn">
+                            <span class="btn-spinner" id="single-spinner"></span>
+                            <i class="fas fa-search" id="single-icon"></i>
+                            Analyze Website
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Bulk -->
+            <div class="col-md-6 anim-fade-up anim-delay-2">
+                <div class="form-card card-secondary">
+                    <div class="form-card-icon icon-teal">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <div class="form-card-title">Bulk Analysis</div>
+                    <div class="form-card-desc">
+                        Upload a file containing hundreds or thousands of store URLs and export the results as CSV.
+                    </div>
+
+                    <form method="POST" action="{{ url_for('analyze_bulk') }}" enctype="multipart/form-data" id="bulk-form">
+                        <label class="form-label-custom">Upload File</label>
+
+                        <div class="file-drop" id="file-drop">
+                            <input type="file" id="file" name="file" accept=".csv,.txt" required>
+                            <i class="fas fa-cloud-upload-alt file-drop-icon"></i>
+                            <div class="file-drop-text">
+                                <strong>Click to browse</strong> or drag & drop<br>
+                                <span style="font-size:.75rem;color:var(--text-3)">CSV or TXT · one URL per line</span>
+                            </div>
+                        </div>
+
+                        <div class="file-name-display" id="file-name-display">
+                            <i class="fas fa-file-csv me-1"></i>
+                            <span id="file-name-text"></span>
+                        </div>
+
+                        <div class="upload-progress" id="upload-progress">
+                            <div class="upload-progress-bar" id="upload-progress-bar"></div>
+                        </div>
+
+                        <button type="submit" class="btn-submit-secondary" id="bulk-btn">
+                            <span class="btn-spinner" id="bulk-spinner" style="border-color:rgba(0,212,170,.2);border-top-color:var(--teal)"></span>
+                            <i class="fas fa-upload" id="bulk-icon"></i>
+                            Upload &amp; Analyze
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ── INFO CARDS ─────────────────────────────────────────────────────── -->
+<section class="info-section">
+    <div class="container" style="padding-top:3rem;">
+        <div class="section-label">Documentation</div>
+
+        <div class="row g-4">
+            <!-- How it works -->
+            <div class="col-lg-6 anim-fade-up anim-delay-2">
+                <div class="info-card">
+                    <div class="info-card-title text-amber">
+                        <i class="fas fa-cogs"></i>
+                        How It Works
+                    </div>
+                    <ul class="steps-list">
+                        <li class="step-item">
+                            <span class="step-num">01</span>
+                            <span>Enter a store URL or upload a CSV/TXT list of URLs</span>
+                        </li>
+                        <li class="step-item">
+                            <span class="step-num">02</span>
+                            <span>The engine fetches each page's HTML source code</span>
+                        </li>
+                        <li class="step-item">
+                            <span class="step-num">03</span>
+                            <span>We match script tags and patterns against our chatbot signature library</span>
+                        </li>
+                        <li class="step-item">
+                            <span class="step-num">04</span>
+                            <span>Results are shown live and can be exported as a CSV at any time</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Supported chatbots -->
+            <div class="col-lg-6 anim-fade-up anim-delay-3">
+                <div class="info-card">
+                    <div class="info-card-title" style="color:var(--teal)">
+                        <i class="fas fa-robot"></i>
+                        Supported Chatbots
+                    </div>
+                    <div class="chatbot-grid">
+                        <div class="chatbot-item"><span class="dot"></span>Shopify Inbox</div>
+                        <div class="chatbot-item"><span class="dot"></span>Tidio</div>
+                        <div class="chatbot-item"><span class="dot"></span>Intercom</div>
+                        <div class="chatbot-item"><span class="dot"></span>Drift</div>
+                        <div class="chatbot-item"><span class="dot"></span>Zendesk</div>
+                        <div class="chatbot-item"><span class="dot"></span>Gorgias</div>
+                        <div class="chatbot-item"><span class="dot"></span>Crisp</div>
+                        <div class="chatbot-item"><span class="dot"></span>LiveChat</div>
+                        <div class="chatbot-item"><span class="dot"></span>Freshchat</div>
+                        <div class="chatbot-item"><span class="dot"></span>Chatty</div>
+                        <div class="chatbot-item"><span class="dot"></span>Willdesk</div>
+                        <div class="chatbot-item"><span class="dot"></span>Smartbot</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ── Single form: spinner ──────────────────────────────────────────
+    document.getElementById('single-form').addEventListener('submit', function() {
+        document.getElementById('single-spinner').style.display = 'block';
+        document.getElementById('single-icon').style.display = 'none';
+        document.getElementById('single-btn').disabled = true;
+    });
+
+    // ── File input: name display + drag-drop ─────────────────────────
+    const fileInput = document.getElementById('file');
+    const fileDrop  = document.getElementById('file-drop');
+    const fileNameDisplay = document.getElementById('file-name-display');
+    const fileNameText    = document.getElementById('file-name-text');
+
+    fileInput.addEventListener('change', function() {
+        if (this.files.length) {
+            fileNameText.textContent = this.files[0].name;
+            fileNameDisplay.style.display = 'block';
+        }
+    });
+
+    ['dragover', 'dragenter'].forEach(e => {
+        fileDrop.addEventListener(e, ev => { ev.preventDefault(); fileDrop.classList.add('drag-over'); });
+    });
+    ['dragleave', 'drop'].forEach(e => {
+        fileDrop.addEventListener(e, () => fileDrop.classList.remove('drag-over'));
+    });
+
+    // ── Bulk form: animated progress then submit ──────────────────────
+    document.getElementById('bulk-form').addEventListener('submit', function(e) {
+        if (!fileInput.files.length) return;
+        e.preventDefault();
+
+        const prog    = document.getElementById('upload-progress');
+        const progBar = document.getElementById('upload-progress-bar');
+        const btn     = document.getElementById('bulk-btn');
+        const spinner = document.getElementById('bulk-spinner');
+        const icon    = document.getElementById('bulk-icon');
+
+        prog.style.display = 'block';
+        btn.disabled = true;
+        spinner.style.display = 'block';
+        icon.style.display = 'none';
+
+        let pct = 0;
+        const iv = setInterval(() => {
+            pct += 12;
+            progBar.style.width = Math.min(pct, 95) + '%';
+            if (pct >= 95) {
+                clearInterval(iv);
+                showToast('File uploaded! Starting analysis…', 'success');
+                this.submit();
+            }
+        }, 150);
+    });
+</script>
+{% endblock %}
