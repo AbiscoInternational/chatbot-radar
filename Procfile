@@ -1,1 +1,1 @@
-web: gunicorn app:app --workers 4 --threads 2 --worker-class gthread --timeout 120 --keep-alive 5 --log-level info
+web: gunicorn app:app --workers 1 --threads 4 --worker-class gthread --timeout 120 --keep-alive 5 --log-level info
