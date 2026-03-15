@@ -1,0 +1,510 @@
+{% extends "base.html" %}
+
+{% block title %}Result — {{ result.url }} · ChatbotRadar{% endblock %}
+
+{% block head_extra %}
+<style>
+    /* ─── PAGE WRAPPER ─────────────────────────────────────────────── */
+    .result-page {
+        padding: 3rem 0 5rem;
+    }
+
+    /* Back bar */
+    .back-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 2rem;
+    }
+
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.83rem;
+        font-family: var(--font-mono);
+        color: var(--text-2);
+        text-decoration: none;
+        border: 1px solid var(--border-2);
+        padding: 0.45rem 1rem;
+        border-radius: var(--radius);
+        transition: all .2s;
+    }
+
+    .back-btn:hover {
+        color: var(--text);
+        border-color: var(--text-3);
+        background: var(--surface-2);
+    }
+
+    /* URL chip */
+    .url-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--text-2);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        padding: 0.4rem 0.9rem;
+        border-radius: var(--radius);
+        text-decoration: none;
+        transition: all .2s;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .url-chip:hover { color: var(--amber); border-color: rgba(245,166,35,.3); }
+    .url-chip span  { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ─── RESULT CARD ──────────────────────────────────────────────── */
+    .result-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+    }
+
+    /* Thin accent line at top */
+    .result-card.success-card { border-top: 3px solid var(--teal); }
+    .result-card.error-card   { border-top: 3px solid var(--red); }
+
+    .result-card-header {
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        background: rgba(0,0,0,.15);
+    }
+
+    .result-card-title {
+        font-family: var(--font-head);
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        letter-spacing: -0.2px;
+    }
+
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--font-mono);
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        padding: 4px 12px;
+        border-radius: 99px;
+    }
+
+    .status-success {
+        background: rgba(0,212,170,.12);
+        border: 1px solid rgba(0,212,170,.3);
+        color: var(--teal);
+    }
+
+    .status-error {
+        background: var(--red-dim);
+        border: 1px solid rgba(255,77,109,.3);
+        color: var(--red);
+    }
+
+    .status-dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+    }
+
+    /* ─── DETECTION PANELS ─────────────────────────────────────────── */
+    .result-body { padding: 2rem; }
+
+    .detection-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 640px) {
+        .detection-grid { grid-template-columns: 1fr; }
+    }
+
+    .detection-panel {
+        background: var(--bg-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.25rem 1.4rem;
+        transition: border-color .2s;
+    }
+
+    .detection-panel:hover { border-color: var(--border-2); }
+
+    .detection-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .detection-panel-label {
+        font-family: var(--font-mono);
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--text-3);
+    }
+
+    /* Big result indicator */
+    .result-indicator {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0.75rem 1rem;
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        font-size: 0.92rem;
+    }
+
+    .indicator-yes {
+        background: rgba(0,212,170,.1);
+        border: 1px solid rgba(0,212,170,.2);
+        color: var(--teal);
+    }
+
+    .indicator-no {
+        background: rgba(255,255,255,.03);
+        border: 1px solid var(--border);
+        color: var(--text-3);
+    }
+
+    .indicator-icon {
+        width: 28px; height: 28px;
+        border-radius: 6px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 13px;
+        flex-shrink: 0;
+    }
+
+    .icon-yes { background: rgba(0,212,170,.15); color: var(--teal); }
+    .icon-no  { background: rgba(255,255,255,.05); color: var(--text-3); }
+
+    /* Chatbot list */
+    .chatbot-detected-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+
+    .chatbot-detected-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        color: var(--text);
+        padding: 0.5rem 0.75rem;
+        border-radius: var(--radius-sm);
+        background: rgba(0,212,170,.06);
+        border: 1px solid rgba(0,212,170,.12);
+    }
+
+    .chatbot-detected-item .ci-dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: var(--teal);
+        flex-shrink: 0;
+    }
+
+    /* ─── SUMMARY FOOTER ───────────────────────────────────────────── */
+    .result-footer {
+        padding: 1.25rem 2rem;
+        border-top: 1px solid var(--border);
+        background: rgba(0,0,0,.1);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .total-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.88rem;
+        color: var(--text-2);
+    }
+
+    .total-count {
+        font-family: var(--font-mono);
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--amber);
+        line-height: 1;
+    }
+
+    .total-label {
+        font-size: 0.72rem;
+        color: var(--text-3);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+    }
+
+    .timestamp {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        color: var(--text-3);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    /* ─── ERROR CARD ───────────────────────────────────────────────── */
+    .error-detail {
+        background: var(--bg-2);
+        border: 1px solid rgba(255,77,109,.2);
+        border-radius: var(--radius);
+        padding: 1rem 1.25rem;
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        color: var(--red);
+        margin-bottom: 1rem;
+        line-height: 1.7;
+        word-break: break-all;
+    }
+
+    .error-hint {
+        font-size: 0.82rem;
+        color: var(--text-3);
+        line-height: 1.6;
+    }
+
+    /* ─── RETRY CTA ────────────────────────────────────────────────── */
+    .retry-section {
+        margin-top: 2rem;
+        padding: 1.5rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .retry-text {
+        font-size: 0.88rem;
+        color: var(--text-2);
+    }
+
+    .retry-text strong { color: var(--text); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container result-page">
+    <div class="row justify-content-center">
+        <div class="col-xl-9 col-lg-10">
+
+            <!-- Back bar -->
+            <div class="back-bar anim-fade-up">
+                <a href="{{ url_for('index') }}" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Back to Detector
+                </a>
+                <a href="{{ result.url }}" target="_blank" rel="noopener" class="url-chip">
+                    <i class="fas fa-globe" style="color:var(--text-3);flex-shrink:0"></i>
+                    <span>{{ result.url }}</span>
+                    <i class="fas fa-external-link-alt" style="color:var(--text-3);flex-shrink:0;font-size:.65rem"></i>
+                </a>
+            </div>
+
+            {% if result.status == 'success' %}
+            <!-- ── SUCCESS CARD ──────────────────────────────────────── -->
+            <div class="result-card success-card anim-fade-up anim-delay-1">
+
+                <div class="result-card-header">
+                    <div class="result-card-title">
+                        <i class="fas fa-chart-bar" style="color:var(--teal)"></i>
+                        Chatbot Analysis Report
+                    </div>
+                    <span class="status-pill status-success">
+                        <span class="status-dot"></span>
+                        Scan Complete
+                    </span>
+                </div>
+
+                <div class="result-body">
+                    <div class="detection-grid">
+
+                        <!-- Shopify Inbox panel -->
+                        <div class="detection-panel">
+                            <div class="detection-panel-header">
+                                <span class="detection-panel-label">
+                                    <i class="fab fa-shopify me-1" style="color:var(--text-3)"></i>
+                                    Shopify Inbox
+                                </span>
+                                {% if result.shopify_inbox %}
+                                    <span class="badge-teal">Detected</span>
+                                {% else %}
+                                    <span class="badge-red">Not Found</span>
+                                {% endif %}
+                            </div>
+
+                            {% if result.shopify_inbox %}
+                                <div class="result-indicator indicator-yes">
+                                    <div class="indicator-icon icon-yes">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-size:.9rem">Shopify Inbox</div>
+                                        <div style="font-size:.7rem;font-family:var(--font-mono);color:var(--teal);opacity:.7;font-weight:400">Active on this store</div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="result-indicator indicator-no">
+                                    <div class="indicator-icon icon-no">
+                                        <i class="fas fa-times"></i>
+                                    </div>
+                                    <div style="font-size:.88rem">Not detected on this store</div>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Other chatbots panel -->
+                        <div class="detection-panel">
+                            <div class="detection-panel-header">
+                                <span class="detection-panel-label">
+                                    <i class="fas fa-comments me-1" style="color:var(--text-3)"></i>
+                                    Other Chatbots
+                                </span>
+                                {% if result.other_chatbots %}
+                                    <span class="badge-amber">{{ result.other_chatbots | length }} found</span>
+                                {% else %}
+                                    <span style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-3)">None</span>
+                                {% endif %}
+                            </div>
+
+                            {% if result.other_chatbots %}
+                                <div class="chatbot-detected-list">
+                                    {% for chatbot in result.other_chatbots %}
+                                        <div class="chatbot-detected-item">
+                                            <span class="ci-dot"></span>
+                                            {{ chatbot }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="result-indicator indicator-no">
+                                    <div class="indicator-icon icon-no">
+                                        <i class="fas fa-times"></i>
+                                    </div>
+                                    <div style="font-size:.88rem">No other chatbots detected</div>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                    </div><!-- /detection-grid -->
+                </div><!-- /result-body -->
+
+                <div class="result-footer">
+                    <div class="d-flex align-items-baseline gap-3">
+                        <div class="total-count">{{ result.total_chatbots }}</div>
+                        <div>
+                            <div style="font-size:.85rem;color:var(--text-2);font-weight:600">Total Chatbots Found</div>
+                            <div class="total-label">across all providers</div>
+                        </div>
+                    </div>
+                    {% if result.analyzed_at %}
+                    <div class="timestamp">
+                        <i class="fas fa-clock"></i>
+                        {{ result.analyzed_at[:19].replace('T', ' ') }}
+                    </div>
+                    {% endif %}
+                </div>
+
+            </div><!-- /success card -->
+
+            {% else %}
+            <!-- ── ERROR CARD ────────────────────────────────────────── -->
+            <div class="result-card error-card anim-fade-up anim-delay-1">
+
+                <div class="result-card-header">
+                    <div class="result-card-title">
+                        <i class="fas fa-exclamation-circle" style="color:var(--red)"></i>
+                        Analysis Failed
+                    </div>
+                    <span class="status-pill status-error">
+                        <span class="status-dot"></span>
+                        Error
+                    </span>
+                </div>
+
+                <div class="result-body">
+                    <p style="font-size:.88rem;color:var(--text-2);margin-bottom:1rem;">
+                        The scan could not be completed for this URL. See the error details below.
+                    </p>
+                    <div class="error-detail">
+                        <i class="fas fa-terminal me-2" style="opacity:.5"></i>
+                        {{ result.error }}
+                    </div>
+                    <p class="error-hint">
+                        <i class="fas fa-info-circle me-1 text-amber"></i>
+                        Common causes: the site is offline, is blocking automated requests, has an invalid SSL certificate,
+                        or a firewall/CDN is preventing access. Try opening the URL in a browser first.
+                    </p>
+                </div>
+
+                <div class="result-footer">
+                    {% if result.analyzed_at %}
+                    <div class="timestamp">
+                        <i class="fas fa-clock"></i>
+                        Failed at {{ result.analyzed_at[:19].replace('T', ' ') }}
+                    </div>
+                    {% endif %}
+                </div>
+
+            </div><!-- /error card -->
+            {% endif %}
+
+            <!-- ── RETRY / NEW SCAN ─────────────────────────────────── -->
+            <div class="retry-section anim-fade-up anim-delay-2">
+                <div class="retry-text">
+                    <strong>Scan another store</strong> or go back to run a bulk analysis.
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ url_for('index') }}" class="btn-ghost" style="text-decoration:none;font-size:.82rem;">
+                        <i class="fas fa-layer-group me-1"></i> Bulk Analysis
+                    </a>
+                    <form method="POST" action="{{ url_for('analyze_single') }}" style="display:inline;">
+                        <input type="hidden" name="url" value="{{ result.url }}">
+                        <button type="submit" style="
+                            background:var(--amber-dim);
+                            border:1px solid rgba(245,166,35,.3);
+                            color:var(--amber);
+                            font-family:var(--font-head);
+                            font-size:.82rem;
+                            padding:.48rem 1rem;
+                            border-radius:var(--radius);
+                            cursor:pointer;
+                            transition:all .2s;
+                        ">
+                            <i class="fas fa-redo me-1"></i> Re-scan This URL
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

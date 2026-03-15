@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+
+{% block title %}Processing… · ChatbotRadar{% endblock %}
+
+{% block head_extra %}
+<style>
+    .progress-page {
+        padding: 3rem 0 5rem;
+    }
+
+    .progress-wrap {
+        max-width: 620px;
+        margin: 0 auto;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────── */
+    .prog-header {
+        margin-bottom: 2rem;
+    }
+    .prog-title {
+        font-family: var(--font-head);
+        font-size: 1.6rem;
+        font-weight: 900;
+        letter-spacing: -0.6px;
+        color: var(--text);
+        margin-bottom: 0.25rem;
+    }
+    .prog-subtitle {
+        font-size: 0.82rem;
+        color: var(--text-2);
+    }
+
+    /* ── Status badge ────────────────────────────────────────────── */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 0.3rem 0.85rem;
+        border-radius: 99px;
+        border: 1px solid transparent;
+        margin-bottom: 1.75rem;
+        transition: all 0.3s;
+    }
+    .sb-processing { background: rgba(0,212,170,.1);  border-color: rgba(0,212,170,.3);  color: var(--teal); }
+    .sb-paused     { background: var(--amber-dim);    border-color: rgba(245,166,35,.3);  color: var(--amber); }
+    .sb-stopped    { background: var(--red-dim);      border-color: rgba(255,77,109,.3);  color: var(--red); }
+    .sb-completed  { background: rgba(0,212,170,.12); border-color: rgba(0,212,170,.35);  color: var(--teal); }
+    .sb-error      { background: var(--red-dim);      border-color: rgba(255,77,109,.3);  color: var(--red); }
+    .sb-not_found  { background: var(--surface-2);    border-color: var(--border-2);      color: var(--text-3); }
+
+    .sb-dot {
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+        flex-shrink: 0;
+    }
+    .sb-dot.pulse { animation: pulse 1.4s ease-in-out infinite; }
+    @keyframes pulse {
+        0%,100% { opacity: 1; transform: scale(1); }
+        50%      { opacity: 0.35; transform: scale(0.65); }
+    }
+
+    /* ── Counter + bar ───────────────────────────────────────────── */
+    .counter-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 0.55rem;
+    }
+    .counter-main {
+        font-family: var(--font-head);
+        font-size: 2.4rem;
+        font-weight: 900;
+        letter-spacing: -1.5px;
+        color: var(--text);
+        line-height: 1;
+    }
+    .counter-sep { color: var(--text-3); margin: 0 0.2rem; }
+    .counter-total-val { font-size: 1.4rem; color: var(--text-3); }
+    .counter-pct {
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        color: var(--text-3);
+    }
+
+    .bar-track {
+        height: 5px;
+        background: var(--border);
+        border-radius: 99px;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+    .bar-fill {
+        height: 100%;
+        border-radius: 99px;
+        background: linear-gradient(90deg, var(--teal), #00b4d8);
+        width: 0%;
+        transition: width 0.4s ease;
+    }
+    .bar-fill.state-paused  { background: linear-gradient(90deg, var(--amber), #ffaa33); }
+    .bar-fill.state-stopped { background: linear-gradient(90deg, var(--red), #ff8fa3); }
+
+    /* ── Controls ────────────────────────────────────────────────── */
+    .controls {
+        display: flex;
+        gap: 0.6rem;
+        margin-bottom: 1.75rem;
+        flex-wrap: wrap;
+    }
+    .ctrl-btn {
+        flex: 1;
+        min-width: 90px;
+        padding: 0.6rem 1rem;
+        border-radius: var(--radius);
+        border: 1px solid var(--border-2);
+        background: transparent;
+        color: var(--text-2);
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+    }
+    .ctrl-btn:hover:not(:disabled) { transform: translateY(-1px); }
+    .ctrl-btn:active:not(:disabled) { transform: translateY(0); }
+    .ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .ctrl-pause  { border-color: rgba(245,166,35,.35); color: var(--amber); }
+    .ctrl-pause:hover:not(:disabled)  { background: var(--amber-dim); }
+
+    .ctrl-resume { border-color: rgba(0,212,170,.35); color: var(--teal); }
+    .ctrl-resume:hover:not(:disabled) { background: var(--teal-dim); }
+
+    .ctrl-stop   { border-color: rgba(255,77,109,.35); color: var(--red); }
+    .ctrl-stop:hover:not(:disabled)   { background: var(--red-dim); }
+
+    /* ── Activity log ────────────────────────────────────────────── */
+    .log-label {
+        font-family: var(--font-mono);
+        font-size: 0.62rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--text-3);
+        margin-bottom: 0.4rem;
+    }
+    .log-box {
+        background: var(--bg-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 0.75rem 1rem;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--text-2);
+        min-height: 48px;
+        line-height: 1.6;
+    }
+
+    /* ── View results CTA ────────────────────────────────────────── */
+    .view-results-cta {
+        display: none;
+        margin-top: 1.5rem;
+    }
+    .view-results-cta a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        justify-content: center;
+        padding: 0.85rem 2rem;
+        background: var(--teal);
+        color: var(--bg);
+        border-radius: var(--radius);
+        font-family: var(--font-head);
+        font-weight: 700;
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: opacity 0.2s, transform 0.15s;
+    }
+    .view-results-cta a:hover { opacity: 0.88; transform: translateY(-1px); }
+
+    /* ── Task ID footer ──────────────────────────────────────────── */
+    .task-footer {
+        font-family: var(--font-mono);
+        font-size: 0.63rem;
+        color: var(--text-3);
+        text-align: right;
+        margin-top: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container progress-page">
+    <div class="progress-wrap">
+
+        <div class="prog-header anim-fade-up">
+            <div class="prog-title">Bulk Analysis</div>
+            <div class="prog-subtitle">Processing your store list — results save automatically.</div>
+        </div>
+
+        <span id="status-badge" class="status-badge sb-processing anim-fade-up anim-delay-1">
+            <span class="sb-dot pulse" id="sb-dot"></span>
+            <span id="sb-text">Initialising…</span>
+        </span>
+
+        <div class="counter-row anim-fade-up anim-delay-1">
+            <div class="counter-main">
+                <span id="current">0</span><span class="counter-sep">/</span><span class="counter-total-val" id="total">—</span>
+            </div>
+            <span class="counter-pct" id="pct">0%</span>
+        </div>
+
+        <div class="bar-track anim-fade-up anim-delay-1">
+            <div class="bar-fill" id="bar"></div>
+        </div>
+
+        <div class="controls anim-fade-up anim-delay-2">
+            <button class="ctrl-btn ctrl-pause"  id="btn-pause"  onclick="control('pause')">⏸ Pause</button>
+            <button class="ctrl-btn ctrl-resume" id="btn-resume" onclick="control('resume')" disabled>▶ Resume</button>
+            <button class="ctrl-btn ctrl-stop"   id="btn-stop"   onclick="control('stop')">⏹ Stop</button>
+        </div>
+
+        <div class="log-label anim-fade-up anim-delay-2">Latest activity</div>
+        <div class="log-box anim-fade-up anim-delay-2" id="log">Waiting for task to start…</div>
+
+        <div class="view-results-cta" id="results-cta">
+            <a href="/bulk_results/{{ task_id }}">
+                <i class="fas fa-chart-bar"></i> View Full Results
+            </a>
+        </div>
+
+        <div class="task-footer">task · {{ task_id }}</div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const TASK_ID = "{{ task_id }}";
+    let pollInterval = null;
+
+    function control(action) {
+        fetch(`/api/control/${TASK_ID}/${action}`, { method: 'POST' })
+            .then(r => r.json())
+            .catch(err => console.error('Control error:', err));
+    }
+
+    const STATUS_LABELS = {
+        processing: '⚡ Processing',
+        paused:     '⏸ Paused',
+        stopped:    '⏹ Stopped',
+        completed:  '✓ Completed',
+        error:      '✕ Error',
+        not_found:  '⌛ Starting…'
+    };
+
+    function updateUI(data) {
+        const current = data.current || 0;
+        const total   = data.total   || 0;
+        const status  = data.status  || 'processing';
+        const pct     = total > 0 ? Math.round((current / total) * 100) : 0;
+
+        document.getElementById('current').textContent = current;
+        document.getElementById('total').textContent   = total || '—';
+        document.getElementById('pct').textContent     = pct + '%';
+
+        const bar = document.getElementById('bar');
+        bar.style.width = pct + '%';
+        bar.className = 'bar-fill' +
+            (status === 'paused'  ? ' state-paused'  :
+             status === 'stopped' ? ' state-stopped' : '');
+
+        const badge = document.getElementById('status-badge');
+        badge.className = `status-badge sb-${status}`;
+
+        const dot = document.getElementById('sb-dot');
+        dot.className = 'sb-dot' + (status === 'processing' ? ' pulse' : '');
+
+        document.getElementById('sb-text').textContent = STATUS_LABELS[status] || status;
+
+        const log = document.getElementById('log');
+        if      (status === 'processing') log.textContent = `Analysing store ${current} of ${total}…`;
+        else if (status === 'paused')     log.textContent = `Paused at ${current} of ${total}. Click Resume to continue.`;
+        else if (status === 'stopped')    log.textContent = `Stopped at ${current} of ${total}. ${current} result(s) saved.`;
+        else if (status === 'completed')  log.textContent = `Done! All ${total} stores processed and saved.`;
+        else if (status === 'error')      log.textContent = 'Error: ' + (data.error_msg || 'Unknown error');
+        else if (status === 'not_found')  log.textContent = 'Task is queued, starting shortly…';
+
+        const isActive = status === 'processing';
+        const isPaused = status === 'paused';
+        const isDone   = ['completed', 'stopped', 'error'].includes(status);
+
+        document.getElementById('btn-pause').disabled  = !isActive;
+        document.getElementById('btn-resume').disabled = !isPaused;
+        document.getElementById('btn-stop').disabled   = isDone;
+
+        if (isDone && current > 0) {
+            document.getElementById('results-cta').style.display = 'block';
+        }
+        if (isDone && pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+        }
+    }
+
+    function poll() {
+        fetch(`/api/progress/${TASK_ID}`)
+            .then(r => r.json())
+            .then(updateUI)
+            .catch(err => console.error('Poll error:', err));
+    }
+
+    poll();
+    pollInterval = setInterval(poll, 1500);
+</script>
+{% endblock %}

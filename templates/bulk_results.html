@@ -1,0 +1,599 @@
+{% extends "base.html" %}
+
+{% block title %}Results — {{ task_id[:12] }} · ChatbotRadar{% endblock %}
+
+{% block head_extra %}
+<style>
+    .results-page { padding: 2.5rem 0 5rem; }
+
+    /* ── Page header ─────────────────────────────────────────────── */
+    .page-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .page-title {
+        font-family: var(--font-head);
+        font-size: 1.7rem;
+        font-weight: 900;
+        letter-spacing: -0.8px;
+        color: var(--text);
+        line-height: 1.1;
+        margin-bottom: 0.25rem;
+    }
+    .page-meta {
+        font-family: var(--font-mono);
+        font-size: 0.68rem;
+        color: var(--text-3);
+    }
+
+    /* ── Stat cards ──────────────────────────────────────────────── */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.75rem;
+    }
+    @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 400px) { .stats-grid { grid-template-columns: 1fr; } }
+
+    .stat-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 1.25rem 1.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2px;
+    }
+    .stat-card.c-total::before  { background: var(--text-3); }
+    .stat-card.c-with::before   { background: var(--teal); }
+    .stat-card.c-without::before { background: var(--red); }
+    .stat-card.c-error::before  { background: var(--amber); }
+
+    .stat-label {
+        font-family: var(--font-mono);
+        font-size: 0.63rem;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        color: var(--text-3);
+        margin-bottom: 0.6rem;
+    }
+    .stat-value {
+        font-family: var(--font-head);
+        font-size: 2.2rem;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: -1px;
+    }
+    .stat-value.v-total   { color: var(--text); }
+    .stat-value.v-with    { color: var(--teal); }
+    .stat-value.v-without { color: var(--red); }
+    .stat-value.v-error   { color: var(--amber); }
+    .stat-sub {
+        font-size: 0.72rem;
+        color: var(--text-3);
+        margin-top: 0.3rem;
+    }
+
+    /* ── Section block ───────────────────────────────────────────── */
+    .section-block {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        margin-bottom: 1.25rem;
+        overflow: hidden;
+    }
+    .section-block-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .section-block-title {
+        font-family: var(--font-mono);
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--text-3);
+    }
+    .section-block-body { padding: 1.25rem 1.5rem; }
+
+    /* ── Download grid ───────────────────────────────────────────── */
+    .dl-group { margin-bottom: 1.25rem; }
+    .dl-group:last-child { margin-bottom: 0; }
+    .dl-group-label {
+        font-family: var(--font-mono);
+        font-size: 0.62rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--text-3);
+        margin-bottom: 0.6rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .dl-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+    }
+
+    .dl-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        padding: 0.6rem 1.1rem;
+        border-radius: var(--radius);
+        border: 1px solid var(--border-2);
+        text-decoration: none;
+        font-size: 0.82rem;
+        font-family: var(--font-head);
+        font-weight: 500;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+    .dl-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+    .dl-btn:active { transform: translateY(0); }
+
+    .dl-btn-icon { font-size: 0.75rem; opacity: 0.85; }
+    .dl-meta {
+        font-family: var(--font-mono);
+        font-size: 0.62rem;
+        opacity: 0.6;
+        margin-left: 0.2rem;
+    }
+
+    .dl-btn.style-default { color: var(--text-2); border-color: var(--border-2); }
+    .dl-btn.style-default:hover { color: var(--text); background: var(--surface-2); }
+
+    .dl-btn.style-teal { color: var(--teal); border-color: rgba(0,212,170,.3); }
+    .dl-btn.style-teal:hover { background: var(--teal-dim); border-color: var(--teal); }
+
+    .dl-btn.style-red { color: var(--red); border-color: rgba(255,77,109,.3); }
+    .dl-btn.style-red:hover { background: var(--red-dim); border-color: var(--red); }
+
+    /* ── Re-analyze banner ───────────────────────────────────────── */
+    .reanalyze-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding: 1.1rem 1.5rem;
+        background: rgba(245,166,35,.05);
+        border: 1px solid rgba(245,166,35,.2);
+        border-radius: var(--radius-lg);
+        margin-bottom: 1.25rem;
+    }
+    .reanalyze-info { flex: 1; min-width: 200px; }
+    .reanalyze-title {
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 0.2rem;
+    }
+    .reanalyze-desc { font-size: 0.78rem; color: var(--text-2); }
+    .btn-reanalyze {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.6rem 1.2rem;
+        background: transparent;
+        border: 1px solid rgba(245,166,35,.4);
+        color: var(--amber);
+        border-radius: var(--radius);
+        font-family: var(--font-head);
+        font-size: 0.83rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+    .btn-reanalyze:hover {
+        background: var(--amber-dim);
+        border-color: var(--amber);
+        transform: translateY(-1px);
+    }
+
+    /* ── Table wrapper ───────────────────────────────────────────── */
+    .table-wrap {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+    }
+    .table-toolbar {
+        padding: 0.9rem 1.25rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        background: rgba(0,0,0,.1);
+    }
+    .table-toolbar-left { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+    .table-title {
+        font-family: var(--font-mono);
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--text-3);
+    }
+
+    /* Search */
+    .search-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: var(--bg);
+        border: 1px solid var(--border-2);
+        border-radius: var(--radius-sm);
+        padding: 0.35rem 0.75rem;
+    }
+    .search-wrap i { font-size: 0.65rem; color: var(--text-3); }
+    .search-wrap input {
+        background: transparent;
+        border: none;
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        outline: none;
+        width: 180px;
+    }
+    .search-wrap input::placeholder { color: var(--text-3); }
+
+    /* Filter tabs */
+    .filter-tabs { display: flex; gap: 0.25rem; }
+    .ftab {
+        padding: 0.3rem 0.75rem;
+        font-family: var(--font-mono);
+        font-size: 0.68rem;
+        border-radius: var(--radius-sm);
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--text-3);
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .ftab:hover { color: var(--text-2); background: var(--surface-2); }
+    .ftab.active-all     { background: var(--surface-2); border-color: var(--border-2); color: var(--text); }
+    .ftab.active-with    { background: var(--teal-dim); border-color: rgba(0,212,170,.3); color: var(--teal); }
+    .ftab.active-without { background: var(--red-dim); border-color: rgba(255,77,109,.25); color: var(--red); }
+    .ftab.active-error   { background: var(--amber-dim); border-color: rgba(245,166,35,.25); color: var(--amber); }
+
+    /* Table */
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+        padding: 0.65rem 1rem;
+        font-family: var(--font-mono);
+        font-size: 0.62rem;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        color: var(--text-3);
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        white-space: nowrap;
+        background: rgba(0,0,0,.08);
+    }
+    tbody td {
+        padding: 0.7rem 1rem;
+        font-size: 0.82rem;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: rgba(255,255,255,.018); }
+
+    .row-num { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-3); }
+
+    .url-cell {
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--text-2);
+        max-width: 320px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .url-cell a { color: inherit; text-decoration: none; }
+    .url-cell a:hover { color: var(--amber); }
+
+    /* Row badges */
+    .rbadge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.18rem 0.6rem;
+        border-radius: 99px;
+        font-family: var(--font-mono);
+        font-size: 0.65rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .rb-yes   { background: rgba(0,212,170,.1);  border: 1px solid rgba(0,212,170,.25); color: var(--teal); }
+    .rb-no    { background: rgba(255,77,109,.08); border: 1px solid rgba(255,77,109,.2); color: var(--red); }
+    .rb-error { background: var(--amber-dim);     border: 1px solid rgba(245,166,35,.25); color: var(--amber); }
+    .rb-ok    { background: rgba(255,255,255,.04); border: 1px solid var(--border); color: var(--text-3); }
+
+    .bot-count-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        border-radius: 99px;
+        font-family: var(--font-mono);
+        font-size: 0.65rem;
+        font-weight: 700;
+    }
+    .bc-zero    { background: rgba(255,255,255,.04); color: var(--text-3); border: 1px solid var(--border); }
+    .bc-nonzero { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(245,166,35,.3); }
+
+    .ts-cell { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-3); white-space: nowrap; }
+
+    .no-rows {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--text-3);
+        font-size: 0.85rem;
+        font-family: var(--font-mono);
+    }
+    .hidden { display: none !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set total      = results | length %}
+{% set with_si    = results | selectattr('shopify_inbox') | list | length %}
+{% set without_si = total - with_si %}
+{% set errors     = results | selectattr('status', 'eq', 'error') | list | length %}
+{% set other_bots = results | selectattr('other_chatbots') | list | length %}
+
+<div class="container results-page">
+
+    <!-- ── Page header ─────────────────────────────────────────────── -->
+    <div class="page-header anim-fade-up">
+        <div>
+            <div class="page-title">Analysis Results</div>
+            <div class="page-meta">task · {{ task_id }} &nbsp;·&nbsp; {{ total }} stores scanned</div>
+        </div>
+        <a href="{{ url_for('index') }}" class="btn-ghost" style="text-decoration:none;align-self:flex-start">
+            <i class="fas fa-plus me-1"></i> New Analysis
+        </a>
+    </div>
+
+    <!-- ── Stats ───────────────────────────────────────────────────── -->
+    <div class="stats-grid anim-fade-up anim-delay-1">
+        <div class="stat-card c-total">
+            <div class="stat-label">Total Stores</div>
+            <div class="stat-value v-total">{{ total }}</div>
+            <div class="stat-sub">scanned</div>
+        </div>
+        <div class="stat-card c-with">
+            <div class="stat-label">Shopify Inbox</div>
+            <div class="stat-value v-with">{{ with_si }}</div>
+            <div class="stat-sub">{{ ((with_si / total * 100) | round(1)) if total > 0 else 0 }}% of total</div>
+        </div>
+        <div class="stat-card c-without">
+            <div class="stat-label">No Shopify Inbox</div>
+            <div class="stat-value v-without">{{ without_si }}</div>
+            <div class="stat-sub">{{ ((without_si / total * 100) | round(1)) if total > 0 else 0 }}% of total</div>
+        </div>
+        <div class="stat-card c-error">
+            <div class="stat-label">Scan Errors</div>
+            <div class="stat-value v-error">{{ errors }}</div>
+            <div class="stat-sub">failed to fetch</div>
+        </div>
+    </div>
+
+    <!-- ── Downloads ───────────────────────────────────────────────── -->
+    <div class="section-block anim-fade-up anim-delay-2">
+        <div class="section-block-header">
+            <i class="fas fa-download" style="color:var(--text-3);font-size:.75rem"></i>
+            <span class="section-block-title">Export Results</span>
+        </div>
+        <div class="section-block-body">
+
+            <!-- CSV -->
+            <div class="dl-group">
+                <div class="dl-group-label">
+                    <i class="fas fa-file-csv" style="color:var(--teal)"></i>
+                    CSV — Full analysis data
+                </div>
+                <div class="dl-grid">
+                    <a href="{{ url_for('download_results', task_id=task_id) }}" class="dl-btn style-default">
+                        <i class="fas fa-table dl-btn-icon"></i>
+                        All Stores
+                        <span class="dl-meta">{{ total }} rows</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- TXT with Shopify Inbox -->
+            <div class="dl-group">
+                <div class="dl-group-label">
+                    <i class="fas fa-file-alt" style="color:var(--teal)"></i>
+                    TXT — With Shopify Inbox (URLs only)
+                </div>
+                <div class="dl-grid">
+                    <a href="{{ url_for('download_with_shopify_inbox_txt', task_id=task_id) }}" class="dl-btn style-teal">
+                        <i class="fas fa-check-circle dl-btn-icon"></i>
+                        With Shopify Inbox
+                        <span class="dl-meta">{{ with_si }} URLs</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- TXT without Shopify Inbox -->
+            <div class="dl-group">
+                <div class="dl-group-label">
+                    <i class="fas fa-file-alt" style="color:var(--red)"></i>
+                    TXT — Without Shopify Inbox (URLs only)
+                </div>
+                <div class="dl-grid">
+                    <a href="{{ url_for('download_without_shopify_inbox_txt', task_id=task_id) }}" class="dl-btn style-red">
+                        <i class="fas fa-times-circle dl-btn-icon"></i>
+                        Without Shopify Inbox
+                        <span class="dl-meta">{{ without_si }} URLs</span>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── Re-analyze banner ────────────────────────────────────────── -->
+    {% if without_si > 0 %}
+    <div class="reanalyze-banner anim-fade-up anim-delay-3">
+        <div class="reanalyze-info">
+            <div class="reanalyze-title">
+                <i class="fas fa-redo-alt text-amber me-1"></i>
+                Re-scan Stores Without Shopify Inbox
+            </div>
+            <div class="reanalyze-desc">
+                Re-run the scan on {{ without_si }} store{{ 's' if without_si != 1 else '' }} — useful if some failed due to timeouts or network errors.
+            </div>
+        </div>
+        <form method="POST" action="{{ url_for('reanalyze_without_shopify_inbox', task_id=task_id) }}" style="display:inline">
+            <button type="submit" class="btn-reanalyze">
+                <i class="fas fa-sync-alt"></i>
+                Re-scan {{ without_si }} Store{{ 's' if without_si != 1 else '' }}
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- ── Results table ────────────────────────────────────────────── -->
+    <div class="table-wrap anim-fade-up anim-delay-4">
+        <div class="table-toolbar">
+            <div class="table-toolbar-left">
+                <span class="table-title">Detailed Results</span>
+                <div class="search-wrap">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="search-input" placeholder="Search URLs…" oninput="applyFilters()">
+                </div>
+            </div>
+            <div class="filter-tabs">
+                <button class="ftab active-all" id="ftab-all"     onclick="setFilter('all')">All ({{ total }})</button>
+                <button class="ftab"            id="ftab-with"    onclick="setFilter('with')">SI ({{ with_si }})</button>
+                <button class="ftab"            id="ftab-without" onclick="setFilter('without')">No SI ({{ without_si }})</button>
+                {% if errors > 0 %}
+                <button class="ftab"            id="ftab-error"   onclick="setFilter('error')">Errors ({{ errors }})</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="table-scroll">
+            <table id="results-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>URL</th>
+                        <th>Shopify Inbox</th>
+                        <th>Other Chatbots</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Scanned At</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    {% for r in results %}
+                    <tr data-si="{{ 'yes' if r.shopify_inbox else 'no' }}"
+                        data-status="{{ r.status }}"
+                        data-url="{{ r.url | lower }}">
+                        <td class="row-num">{{ loop.index }}</td>
+                        <td class="url-cell" title="{{ r.url }}">
+                            <a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.url }}</a>
+                        </td>
+                        <td>
+                            {% if r.status == 'error' %}
+                                <span class="rbadge rb-error"><i class="fas fa-exclamation"></i> Error</span>
+                            {% elif r.shopify_inbox %}
+                                <span class="rbadge rb-yes"><i class="fas fa-check"></i> Yes</span>
+                            {% else %}
+                                <span class="rbadge rb-no"><i class="fas fa-times"></i> No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set cnt = r.other_chatbots | length %}
+                            <span class="bot-count-pill {{ 'bc-nonzero' if cnt > 0 else 'bc-zero' }}">{{ cnt }}</span>
+                        </td>
+                        <td>
+                            {% set tc = r.total_chatbots | default(0) %}
+                            <span class="bot-count-pill {{ 'bc-nonzero' if tc > 0 else 'bc-zero' }}">{{ tc }}</span>
+                        </td>
+                        <td>
+                            {% if r.status == 'error' %}
+                                <span class="rbadge rb-error" title="{{ r.get('error', '') }}">Failed</span>
+                            {% else %}
+                                <span class="rbadge rb-ok">OK</span>
+                            {% endif %}
+                        </td>
+                        <td class="ts-cell">
+                            {{ r.analyzed_at[:16].replace('T', ' ') if r.analyzed_at else '—' }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="no-rows hidden" id="no-rows-msg">No results match the current filter.</div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let activeFilter = 'all';
+
+    function setFilter(f) {
+        activeFilter = f;
+        ['all','with','without','error'].forEach(t => {
+            const btn = document.getElementById('ftab-' + t);
+            if (!btn) return;
+            btn.className = 'ftab' + (t === f ? ` active-${t}` : '');
+        });
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const term = document.getElementById('search-input').value.toLowerCase();
+        const rows = document.querySelectorAll('#table-body tr');
+        let visible = 0;
+
+        rows.forEach(row => {
+            const si     = row.dataset.si;
+            const status = row.dataset.status;
+            const url    = row.dataset.url;
+
+            const matchFilter =
+                activeFilter === 'all' ||
+                (activeFilter === 'with'    && si === 'yes' && status !== 'error') ||
+                (activeFilter === 'without' && si === 'no'  && status !== 'error') ||
+                (activeFilter === 'error'   && status === 'error');
+
+            const matchSearch = !term || url.includes(term);
+
+            const show = matchFilter && matchSearch;
+            row.classList.toggle('hidden', !show);
+            if (show) visible++;
+        });
+
+        document.getElementById('no-rows-msg').classList.toggle('hidden', visible > 0);
+    }
+</script>
+{% endblock %}
